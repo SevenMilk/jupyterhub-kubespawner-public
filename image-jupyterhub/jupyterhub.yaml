@@ -1,0 +1,181 @@
+# can use configMap or volume jupyterhub_config.py file (used)
+#
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+    name: jupyterhub-env
+    namespace: data-analyze
+data:
+    Authenticator_allowed_users: '{"eric"}'
+    Authenticator_admin_users: '{"eric"}'
+    JupyterHub_spawner_class: '"kubespawner.KubeSpawner"'
+    KubeSpawner_image: '"moonlight165\/jupyter-hub-singleuser:0.0.3"'
+    KubeSpawner_pod_name_template: '"jupyter-{username}"'
+    KubeSpawner_cpu_guarantee: '0.1'
+    KubeSpawner_cpu_limit: '1'
+    KubeSpawner_mem_guarantee: '"1G"'
+    KubeSpawner_mem_limit: '"4G"'
+    KubeSpawner_env_keep: '["http_proxy","https_proxy"]'
+    KubeSpawner_environment: '{"JUPYTERHUB_API_URL": "http:\/\/10.110.199.228:8000\/hub\/api"}'
+    KubeSpawner_namespace: '"data-analyze"'
+    KubeSpawner_service_account: '"airflow"'
+    KubeSpawner_volume_mounts: '[{"name":"data-analyze","mountPath":"\/home\/jovyan","subPath": "wei\/jupyterhub-kube\/{username}"}]'
+    KubeSpawner_volumes: '[{"name": "data-analyze","persistentVolumeClaim": {"claimName": "data-analyze"}}]'
+    KubeSpawner_notebook_dir: '"\/home\/jovyan"'
+    KubeSpawner_working_dir: '"\/home\/jovyan"'
+    KubeSpawner_args: '["--SingleUserNotebookApp.default_url=\/tree"]'
+    LocalAuthenticator_create_system_users: 'False'
+    JupyterHub_authenticator_class: '"nativeauthenticator.NativeAuthenticator"'
+    NativeAuthenticator_open_signup: 'True'
+    NativeAuthenticator_minimum_password_length: '6'
+    NativeAuthenticator_check_common_password: 'True'
+    NativeAuthenticator_allowed_failed_logins: '5'
+    NativeAuthenticator_seconds_before_next_try: '180'
+    JupyterHub_shutdown_on_logout: 'True'
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyter-hub
+  namespace: data-analyze
+  labels:
+    app: jupyter-hub
+spec:
+  hostNetwork: true
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyter-hub
+  template:
+    metadata:
+      labels:
+        app: jupyter-hub
+    spec:
+      automountServiceAccountToken: true
+      serviceAccountName: airflow
+      serviceAccount: airflow
+      containers:
+        - name: jupyter-hub
+          command: ["/bin/bash", "-c"]
+          args: ["/srv/jupyterhub/job.sh","/usr/local/bin/jupyterhub"]
+          image: moonlight165/jupyter-hub:0.0.6
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              hostPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: data-analyze
+              mountPath: /srv/jupyterhub/jupyterhub.sqlite
+              subPath: wei/jupyterhub-kube/jupyterhub.sqlite
+            - name: data-analyze
+              mountPath: /srv/jupyterhub/jupyterhub_config.py
+              subPath: wei/jupyterhub-kube/jupyterhub_config.py
+          envFrom:
+            - configMapRef:
+                name: jupyterhub-env
+          env:
+            - name: CONTAINER_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+          resources:
+            limits:
+              cpu: '1'
+              memory: 2G
+            requests:
+              cpu: '0.5'
+              memory: 1G
+          imagePullPolicy: Always
+      volumes:
+        - name: data-analyze
+          persistentVolumeClaim:
+            claimName: data-analyze
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: jupyter-hub
+  namespace: data-analyze
+spec:
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: jupyter-hub
+  type: NodePort
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: jupyter-hub
+  namespace: data-analyze
+spec:
+  ports:
+    - name: jupyter-hub
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: jupyter-hub
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: jupyter-hub-traefik
+  namespace: data-analyze
+spec:
+  ports:
+    - name: jupyter-hub-traefik
+      protocol: TCP
+      port: 8099
+      targetPort: 8099
+  selector:
+    app: jupyter-hub
+
+---
+
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: traefik-ingress-pathprefixstrip
+  namespace: airflow
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.frontend.rule.type: PathPrefixStrip
+spec:
+  rules:
+  - http:
+      paths:
+        - path: /airflow/jupyter-hub-traefik
+          backend:
+            serviceName: jupyter-hub-traefik
+            servicePort: 8099
+
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: traefik-ingress-pathprefix
+  namespace: airflow
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.frontend.rule.type: PathPrefix
+spec:
+  rules:
+  - http:
+      paths:
+        - path: /airflow/jupyter-hub
+          backend:
+            serviceName: jupyter-hub
+            servicePort: 8000

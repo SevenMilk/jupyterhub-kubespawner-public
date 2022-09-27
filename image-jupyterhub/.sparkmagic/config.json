@@ -1,0 +1,93 @@
+{
+  "kernel_python_credentials" : {
+    "username": "",
+    "password": "",
+    "url": "http://192.168.52.128:9000",
+    "auth": "None"
+  },
+
+  "kernel_scala_credentials" : {
+    "username": "",
+    "password": "",
+    "url": "http://192.168.52.128:9000",
+    "auth": "None"
+  },
+  "kernel_r_credentials": {
+    "username": "",
+    "password": "",
+    "url": "http://192.168.52.128:9000"
+  },
+
+  "logging_config": {
+    "version": 1,
+    "formatters": {
+      "magicsFormatter": { 
+        "format": "%(asctime)s\t%(levelname)s\t%(message)s",
+        "datefmt": ""
+      }
+    },
+    "handlers": {
+      "magicsHandler": { 
+        "class": "hdijupyterutils.filehandler.MagicsFileHandler",
+        "formatter": "magicsFormatter",
+        "home_path": "~/.sparkmagic"
+      }
+    },
+    "loggers": {
+      "magicsLogger": { 
+        "handlers": ["magicsHandler"],
+        "level": "DEBUG",
+        "propagate": 0
+      }
+    }
+  },
+  "authenticators": {
+    "Kerberos": "sparkmagic.auth.kerberos.Kerberos",
+    "None": "sparkmagic.auth.customauth.Authenticator", 
+    "Basic_Access": "sparkmagic.auth.basic.Basic"
+  },
+
+  "wait_for_idle_timeout_seconds": 300,
+  "livy_session_startup_timeout_seconds": 1800,
+
+  "fatal_error_suggestion": "The code failed because of a fatal error:\n\t{}.\n\nSome things to try:\na) Make sure Spark has enough available resources for Jupyter to create a Spark context.\nb) Contact your Jupyter administrator to make sure the Spark magics library is configured correctly.\nc) Restart the kernel.",
+
+  "ignore_ssl_errors": false,
+
+  "session_configs": {
+    "kind": "pyspark",
+    "name": "RD-dev.jupyter",
+    "driverMemory": "1G",
+    "driverCores": 1,
+    "executorCores": 1,
+    "executorMemory": "4G",
+    "numExecutors": 5,
+    "heartbeatTimeoutInSecond": 300,
+    "queue": "default",
+    "pyFiles": [""],
+    "archives": ["hdfs://mycluster/user/eric/Spark_Archives/zip/base_env.zip#py37"],
+    "conf": {
+        "spark.master": "yarn",
+        "spark.default.parallelism": "60",
+        "spark.sql.shuffle.partitions": "200",
+        "spark.sql.auto.repartition": "true",
+        "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "py37/bin/python3"
+    }
+  },
+
+  "use_auto_viz": true,
+  "coerce_dataframe": true,
+  "max_results_sql": 2500,
+  "pyspark_dataframe_encoding": "utf-8",
+  
+  "heartbeat_refresh_seconds": 300,
+  "livy_server_heartbeat_timeout_seconds": 0,
+  "heartbeat_retry_seconds": 10,
+
+  "server_extension_default_kernel_name": "pysparkkernel",
+  "custom_headers": {},
+  
+  "retry_policy": "configurable",
+  "retry_seconds_to_sleep_list": [0.2, 0.5, 1, 3, 5],
+  "configurable_retry_policy_max_retries": 8
+}

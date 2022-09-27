@@ -1,0 +1,16 @@
+pyarrow==0.17.0
+user-agents==2.2.0
+requests==2.24.0
+numpy==1.21.0
+pandarallel==1.6.3
+pandas==1.3.0
+urllib3==1.25.8
+matplotlib==3.5.2
+scikit-learn
+pendulum==2.1.2
+featuretools==0.18.0
+ua-parser==0.16.0
+seaborn==0.11.2
+statsmodels==0.13.1
+monpa==0.3.3
+dash==2.6.1

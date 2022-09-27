@@ -1,0 +1,26 @@
+stages:
+  - build
+  - deploy
+
+Build-jupyterhub:
+  stage: build
+  tags:
+    - DA
+  script:
+    - docker build --force-rm --no-cache -t moonlight165/jupyter-hub:0.0.7 -f image-jupyterhub/Dockerfile ./image-jupyterhub
+
+Build-singleuser:
+  stage: build
+  tags:
+    - DA
+  script:
+    - docker build --force-rm --no-cache -t moonlight165/jupyter-hub-singleuser:0.0.3 -f image-singleuser/Dockerfile ./image-singleuser
+
+Deploy:
+  stage: deploy
+  tags:
+    - DA
+  script:
+    - docker push moonlight165/jupyter-hub:0.0.7
+    - docker push moonlight165/jupyter-hub-singleuser:0.0.3
+    - docker rmi moonlight165/jupyter-hub:0.0.7 moonlight165/jupyter-hub-singleuser:0.0.3
